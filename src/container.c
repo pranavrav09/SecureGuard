@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include "securerunner/linux.h"
 #include "securerunner/runtime.h"
 
