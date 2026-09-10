@@ -63,7 +63,7 @@ int main(void) {
     (void)mount("sysfs", "/sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
     (void)mount("devtmpfs", "/dev", "devtmpfs", MS_NOSUID | MS_NOEXEC, NULL);
     (void)mount("tmpfs", "/tmp", "tmpfs", MS_NOSUID | MS_NODEV, "size=16m");
-    (void)sethostname("securerunner-vm", 15);
+    if (sethostname("securerunner-vm", 15) != 0) exit_qemu(125);
 
     fd = open("/proc/cmdline", O_RDONLY | O_CLOEXEC);
     if (fd < 0) exit_qemu(125);

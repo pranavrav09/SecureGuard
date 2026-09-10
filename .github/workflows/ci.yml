@@ -29,4 +29,4 @@ jobs:
           LDFLAGS: -fsanitize=address,undefined
         run: make
       - name: Exercise parser and process backend without seccomp
-        run: ./bin/securerunner --mode process --no-seccomp --network host -- ./bin/fixture echo sanitized
+        run: ./bin/securerunner --mode process --memory 32768G --no-seccomp --network host -- ./bin/fixture echo sanitized
