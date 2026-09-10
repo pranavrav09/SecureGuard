@@ -1,5 +1,5 @@
 CC ?= cc
-CPPFLAGS ?= -Iinclude
+CPPFLAGS ?= -D_GNU_SOURCE -Iinclude
 CFLAGS ?= -O2 -g -std=c17 -Wall -Wextra -Wpedantic -Werror -D_FORTIFY_SOURCE=2
 LDFLAGS ?= -Wl,-z,relro,-z,now,-z,noexecstack
 
