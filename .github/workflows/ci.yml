@@ -11,18 +11,22 @@ jobs:
   build-and-process-security:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build with hardening flags
         run: make
       - name: Run unprivileged security tests
         run: make test-process
       - name: Build static container and VM fixtures
         run: make fixture-static guest-init
+      - name: Run complete namespace and cgroup security suite
+        run: |
+          ./scripts/build-test-rootfs.sh
+          sudo ./tests/security.sh
 
   sanitizers:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build with sanitizers
         env:
           CFLAGS: -O1 -g -std=c17 -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer
