@@ -1,0 +1,8 @@
+{
+  "source": "user-provided Ubuntu VM measurements",
+  "metric": "sandbox startup latency",
+  "percentile": 95,
+  "process_ms": 0.9,
+  "container_ms": 2.7,
+  "vm_ms": 1420.0
+}
