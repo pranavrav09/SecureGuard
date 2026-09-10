@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <linux/capability.h>
 #include <sched.h>
 #include <signal.h>
@@ -26,6 +27,7 @@ struct child_context {
     const struct sr_config *cfg;
     int ready_fd;
     int unused_write_fd;
+    bool user_namespace;
 };
 
 static int make_device(const char *path, mode_t mode, unsigned int major_no,
@@ -63,7 +65,7 @@ static int mount_rootfs(const char *configured_root) {
     return 0;
 }
 
-static int drop_capabilities(void) {
+static int drop_privileges(bool user_namespace) {
     struct __user_cap_header_struct header = {
         .version = _LINUX_CAPABILITY_VERSION_3,
         .pid = 0,
@@ -75,7 +77,13 @@ static int drop_capabilities(void) {
         if (prctl(PR_CAPBSET_DROP, capability, 0, 0, 0) != 0 && errno != EINVAL)
             return -1;
     }
-    if (syscall(SYS_capset, &header, &data) != 0) return -1;
+    if (!user_namespace) {
+        if (setgroups(0, NULL) != 0) return -1;
+        if (setresgid(65534, 65534, 65534) != 0) return -1;
+        if (setresuid(65534, 65534, 65534) != 0) return -1;
+    } else if (syscall(SYS_capset, &header, &data) != 0) {
+        return -1;
+    }
     return 0;
 }
 
@@ -108,8 +116,8 @@ static int container_child(void *argument) {
         perror("securerunner: setrlimit");
         return 125;
     }
-    if (drop_capabilities() != 0) {
-        perror("securerunner: drop capabilities");
+    if (drop_privileges(context->user_namespace) != 0) {
+        perror("securerunner: drop privileges");
         return 125;
     }
     if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0) {
@@ -150,11 +158,12 @@ int sr_run_container(const struct sr_config *cfg) {
     struct child_context context;
     char *stack = NULL;
     int sync_pipe[2] = {-1, -1};
-    int flags = CLONE_NEWUSER | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWUTS |
-                CLONE_NEWIPC | SIGCHLD;
+    bool use_user_namespace = geteuid() != 0;
+    int flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD;
     pid_t pid;
     int result = 125;
 
+    if (use_user_namespace) flags |= CLONE_NEWUSER;
     if (cfg->network == SR_NETWORK_NONE) flags |= CLONE_NEWNET;
     if (pipe2(sync_pipe, O_CLOEXEC) != 0) {
         perror("securerunner: pipe");
@@ -168,6 +177,7 @@ int sr_run_container(const struct sr_config *cfg) {
     context.cfg = cfg;
     context.ready_fd = sync_pipe[0];
     context.unused_write_fd = sync_pipe[1];
+    context.user_namespace = use_user_namespace;
     pid = clone(container_child, stack + SR_STACK_SIZE, flags, &context);
     if (pid < 0) {
         perror("securerunner: clone namespaces");
@@ -177,7 +187,7 @@ int sr_run_container(const struct sr_config *cfg) {
     close(sync_pipe[0]);
     sync_pipe[0] = -1;
 
-    if (write_id_map(pid, getuid(), getgid()) != 0) {
+    if (use_user_namespace && write_id_map(pid, getuid(), getgid()) != 0) {
         perror("securerunner: configure user namespace mappings");
         (void)kill(pid, SIGKILL);
         (void)waitpid(pid, NULL, 0);

@@ -33,7 +33,7 @@ Process mode starts in under a millisecond on the reference host:
 ./bin/securerunner --mode process --timeout 1000 --memory 64M -- /usr/bin/printf 'hello\n'
 ```
 
-Build the minimal static test root and run a namespace container. Root is used here to delegate a cgroup; the payload still runs as UID 0 only inside its one-ID user namespace and receives no capabilities.
+Build the minimal static test root and run a namespace container. Root is used here to delegate a cgroup and prepare mounts; before execution the payload is changed to UID/GID 65534 and receives no capabilities. When invoked without root, SecureRunner instead uses a one-ID user namespace when the host permits unprivileged namespace mounts.
 
 ```bash
 ./scripts/build-test-rootfs.sh

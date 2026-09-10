@@ -11,10 +11,10 @@ SecureRunner keeps policy setup in the trusted parent/launcher and crosses the i
 
 ## Container mode
 
-1. `clone(2)` a stopped child with new user, PID, mount, UTS, IPC, and (by default) network namespaces.
-2. From the parent, install a one-ID UID/GID map and place the child in a fresh cgroup v2 leaf with `memory.max`, `pids.max`, and `cpu.max` configured.
+1. `clone(2)` a stopped child with new PID, mount, UTS, IPC, and (by default) network namespaces. Unprivileged launches also create a user namespace; root launches avoid that path for compatibility with distributions that restrict user-namespace mounts.
+2. From the parent, install a one-ID UID/GID map when needed and place the child in a fresh cgroup v2 leaf with `memory.max`, `pids.max`, and `cpu.max` configured.
 3. Release the child. It marks mounts private, bind-mounts and pivots into the requested root, detaches the old root, remounts `/` read-only, and creates private `/proc`, `/dev`, and `/tmp` mounts.
-4. Apply rlimits, clear all capability sets, disable dumpability, install seccomp, sanitize the environment, and execute the payload as PID 1 in its namespace.
+4. Apply rlimits, clear all capability sets, change a root-launched child to UID/GID 65534, disable dumpability, install seccomp, sanitize the environment, and execute the payload as PID 1 in its namespace.
 5. The parent enforces the deadline, kills remaining cgroup members, and removes the cgroup leaf.
 
 The setup pipe is important: untrusted code cannot run between namespace creation and UID-map/cgroup placement.
