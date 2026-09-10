@@ -8,6 +8,10 @@ ROOTFS="$ROOT/build/test-rootfs"
 PROCESS_ONLY=0
 PASSED=0
 FAILED=0
+TEST_TMP=$(mktemp -d)
+TEST_OUT="$TEST_TMP/out"
+TEST_ERR="$TEST_TMP/err"
+trap 'rm -rf "$TEST_TMP"' EXIT
 
 if [[ ${1:-} == "--process-only" ]]; then
     PROCESS_ONLY=1
@@ -26,11 +30,11 @@ fail() {
 expect_status() {
     local name=$1 expected=$2
     shift 2
-    "$@" >/tmp/securerunner-test.out 2>/tmp/securerunner-test.err
+    "$@" >"$TEST_OUT" 2>"$TEST_ERR"
     local actual=$?
     if [[ $actual -eq $expected ]]; then pass "$name"; else
         fail "$name (expected $expected, got $actual)"
-        sed 's/^/# /' /tmp/securerunner-test.err
+        sed 's/^/# /' "$TEST_ERR"
     fi
 }
 
@@ -38,11 +42,11 @@ expect_output() {
     local name=$1 expected=$2
     shift 2
     local output
-    output=$("$@" 2>/tmp/securerunner-test.err)
+    output=$("$@" 2>"$TEST_ERR")
     local actual=$?
     if [[ $actual -eq 0 && $output == "$expected" ]]; then pass "$name"; else
         fail "$name (status $actual, output '$output')"
-        sed 's/^/# /' /tmp/securerunner-test.err
+        sed 's/^/# /' "$TEST_ERR"
     fi
 }
 
