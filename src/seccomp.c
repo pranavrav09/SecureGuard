@@ -19,7 +19,7 @@
 #endif
 
 #define SR_APPEND(filter, count, statement) \
-    do { (filter)[(count)++] = (struct sock_filter)(statement); } while (0)
+    do { (filter)[(count)++] = (struct sock_filter)statement; } while (0)
 
 #define SR_DENY_SYSCALL(filter, count, syscall_number)                         \
     do {                                                                       \
